@@ -1,15 +1,47 @@
+"""
+core/browser_manager.py
+————————————————————————————————————————
+Launches an undetected-chromedriver instance routed
+through ScraperAPI (via Selenium-Wire) and suppresses
+SSL-certificate warnings so you don’t see the
+‘Your connection is not private / ERR_CERT_AUTHORITY_INVALID’
+screen while testing.
+
+⚠️  Only use the “ignore-certificate-errors” flags in a
+     dev or test environment.  Remove them for production
+     once you have the CA cert trusted.
+"""
+
 import os
-from seleniumwire import webdriver
-import undetected_chromedriver as uc
-from fake_useragent import UserAgent
 from dotenv import load_dotenv
 
-load_dotenv()
+# Stealth browser & proxy helpers
+import undetected_chromedriver as uc
+from seleniumwire import webdriver              # Selenium-Wire proxy layer
+from fake_useragent import UserAgent            # Random UA strings
+
+# ---------------------------------------------------------------------------
+
+load_dotenv()                                   # pulls SCRAPERAPI_KEY from .env
 
 
-def launch_browser(headless=True):
-    key = os.getenv("SCRAPERAPI_KEY")
-    proxy_url = f"http://scraperapi:{key}@proxy-server.scraperapi.com:8001"
+def launch_browser(headless: bool = False):
+    """
+    Launch a stealth Chrome instance routed through ScraperAPI
+    and ignoring SSL-certificate errors (testing only).
+
+    Returns
+    -------
+    seleniumwire.webdriver.Chrome
+    """
+    # -----------------------------------------------------------------------
+    # 1.  Build Selenium-Wire proxy settings
+    # -----------------------------------------------------------------------
+    api_key = os.getenv("SCRAPERAPI_KEY")
+    if not api_key:
+        raise EnvironmentError("SCRAPERAPI_KEY missing in your .env file")
+
+    proxy_url = f"http://scraperapi:{api_key}@proxy-server.scraperapi.com:8001"
 
     sw_options = {
         "proxy": {
@@ -19,18 +51,36 @@ def launch_browser(headless=True):
         }
     }
 
-    options = uc.ChromeOptions()
-    if headless:
-        options.add_argument("--headless=new")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument(f"user-agent={UserAgent().random}")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--start-maximized")
-    options.add_argument("--disable-extensions")
-    options.add_argument("--disable-infobars")
-    options.add_argument(
-        "--proxy-server=http://proxy-server.scraperapi.com:8001")
+    # -----------------------------------------------------------------------
+    # 2.  Chrome options (stealth + SSL-ignore flags for dev)
+    # -----------------------------------------------------------------------
+    uc_options = uc.ChromeOptions()
 
-    driver = uc.Chrome(options=options, seleniumwire_options=sw_options)
+    if headless:
+        uc_options.add_argument("--headless=new")
+
+    # Stealth flags
+    uc_options.add_argument("--disable-blink-features=AutomationControlled")
+    uc_options.add_argument(f"user-agent={UserAgent().random}")
+    uc_options.add_argument("--no-sandbox")
+    uc_options.add_argument("--disable-dev-shm-usage")
+    uc_options.add_argument("--disable-extensions")
+    uc_options.add_argument("--disable-infobars")
+
+    # ❗ Testing-only flags – bypass privacy warning
+    uc_options.add_argument("--ignore-certificate-errors")
+    uc_options.add_argument("--allow-insecure-localhost")
+    uc_options.add_argument("--allow-running-insecure-content")
+
+    # NOTE: DO NOT add a separate --proxy-server flag here.
+    # Selenium-Wire handles the proxy + authentication internally.
+
+    # -----------------------------------------------------------------------
+    # 3.  Launch undetected Chrome wrapped by Selenium-Wire
+    # -----------------------------------------------------------------------
+    driver = uc.Chrome(
+        options=uc_options,
+        seleniumwire_options=sw_options,
+    )
+
     return driver
