@@ -2,30 +2,33 @@ import os
 from dotenv import load_dotenv
 from fake_useragent import UserAgent
 
-# ✅ Correct way to use undetected-chromedriver via selenium-wire
 from seleniumwire.undetected_chromedriver.v2 import Chrome, ChromeOptions
 
 load_dotenv()
 
 
 def launch_browser(headless=True):
-    key = os.getenv("SCRAPERAPI_KEY")
-    if not key:
-        raise EnvironmentError("SCRAPERAPI_KEY is missing in .env file")
+    # 🌐 Webshare Proxy Setup (Individual Proxy)
+    proxy_host = os.getenv("WEBSHARE_HOST")
+    proxy_port = os.getenv("WEBSHARE_PORT")
+    proxy_user = os.getenv("WEBSHARE_USER")
+    proxy_pass = os.getenv("WEBSHARE_PASS")
 
-    # 🔐 ScraperAPI authenticated proxy
-    proxy_url = f"http://scraperapi:{key}@proxy-server.scraperapi.com:8001"
+    if not all([proxy_host, proxy_port, proxy_user, proxy_pass]):
+        raise EnvironmentError("❌ Missing Webshare proxy credentials in .env")
+
+    proxy_url = f"http://{proxy_user}:{proxy_pass}@{proxy_host}:{proxy_port}"
 
     # ✅ Selenium-Wire proxy config
     sw_options = {
         "proxy": {
-            "http":  proxy_url,
+            "http": proxy_url,
             "https": proxy_url,
             "no_proxy": "localhost,127.0.0.1"
         }
     }
 
-    # 🧠 Stealth browser flags
+    # 🧠 Stealth Chrome setup
     options = ChromeOptions()
     if headless:
         options.add_argument("--headless=new")
@@ -37,12 +40,14 @@ def launch_browser(headless=True):
     options.add_argument("--disable-extensions")
     options.add_argument("--disable-infobars")
 
-    # 🧪 TEMP ONLY: Ignore SSL certs (so httpbin/github don't block you)
+    # 🧪 Dev SSL bypass (DO NOT keep in prod)
     options.add_argument("--ignore-certificate-errors")
     options.add_argument("--allow-insecure-localhost")
     options.add_argument("--allow-running-insecure-content")
 
-    # ❌ DO NOT add proxy-server manually — Selenium-Wire handles it
+    driver = Chrome(
+        options=options,
+        seleniumwire_options=sw_options
+    )
 
-    driver = Chrome(options=options, seleniumwire_options=sw_options)
     return driver
