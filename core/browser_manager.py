@@ -50,4 +50,9 @@ def launch_browser(headless=True):
         seleniumwire_options=sw_options
     )
 
+    # Properly override User-Agent
+    driver.header_overrides = {
+        'User-Agent': UserAgent().random
+    }
+
     return driver
