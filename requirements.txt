@@ -3,5 +3,5 @@ selenium
 python-dotenv
 fake_useragent
 blinker==1.6.3     # selenium-wire/mitmproxy needs _saferef
-
+beautifulsoup4
 # Add your project dependencies here

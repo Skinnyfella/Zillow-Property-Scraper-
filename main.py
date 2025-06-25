@@ -7,13 +7,13 @@ def run_demo():
     logger = get_logger()
     driver = launch_browser(headless=False)
 
-    driver.get("https://github.com/")  # 👈 see IP inside real browser
+    driver.get("https://www.whatismyip.com/")  # Test IP
 
     simulate_mouse_move(driver)
     simulate_scroll(driver)
 
     try:
-        input("✅ Press Enter to close browser...")
+        input("✅ Press Enter after solving CAPTCHA or puzzle manually...")
     finally:
         driver.quit()
 
