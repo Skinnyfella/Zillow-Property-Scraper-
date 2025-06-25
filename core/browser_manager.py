@@ -1,5 +1,14 @@
-from undetected_chromedriver import Chrome, ChromeOptions
+import os
+from dotenv import load_dotenv
 from fake_useragent import UserAgent
+from seleniumwire.undetected_chromedriver.v2 import Chrome, ChromeOptions
+
+load_dotenv()
+
+PROXY_ADDRESS = os.getenv("PROXY_ADDRESS")
+PROXY_PORT = os.getenv("PROXY_PORT")
+PROXY_USER = os.getenv("PROXY_USER")
+PROXY_PASS = os.getenv("PROXY_PASS")
 
 
 def launch_browser(headless=True):
@@ -16,11 +25,23 @@ def launch_browser(headless=True):
     options.add_argument("--ignore-certificate-errors")
     options.add_argument("--allow-insecure-localhost")
     options.add_argument("--allow-running-insecure-content")
-
     options.add_argument(f"user-agent={UserAgent().random}")
+
+    seleniumwire_options = {}
+
+    if all([PROXY_ADDRESS, PROXY_PORT, PROXY_USER, PROXY_PASS]):
+        seleniumwire_options = {
+            'proxy': {
+                'http': f'http://{PROXY_USER}:{PROXY_PASS}@{PROXY_ADDRESS}:{PROXY_PORT}',
+                'https': f'https://{PROXY_USER}:{PROXY_PASS}@{PROXY_ADDRESS}:{PROXY_PORT}',
+                'no_proxy': 'localhost,127.0.0.1'
+            }
+        }
 
     driver = Chrome(
         options=options,
-        version_main=137)
+        seleniumwire_options=seleniumwire_options,
+        version_main=137
+    )
 
     return driver
