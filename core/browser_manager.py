@@ -6,6 +6,7 @@ from seleniumwire.undetected_chromedriver.v2 import Chrome, ChromeOptions
 
 load_dotenv()
 
+USE_PROXY = os.getenv("USE_PROXY", "false").lower() == "true"
 PROXY_ADDRESS = os.getenv("PROXY_ADDRESS")
 PROXY_PORT = os.getenv("PROXY_PORT")
 PROXY_USER = os.getenv("PROXY_USER")
@@ -33,7 +34,7 @@ def launch_browser(headless=True):
 
     seleniumwire_options = {}
 
-    if all([PROXY_ADDRESS, PROXY_PORT, PROXY_USER, PROXY_PASS]):
+    if USE_PROXY and all([PROXY_ADDRESS, PROXY_PORT, PROXY_USER, PROXY_PASS]):
         proxy_str = f"http://{PROXY_USER}:{PROXY_PASS}@{PROXY_ADDRESS}:{PROXY_PORT}"
         seleniumwire_options = {
             'proxy': {
@@ -44,14 +45,14 @@ def launch_browser(headless=True):
         }
         print("✅ Proxy applied:", proxy_str)
     else:
-        print("⚠️ Proxy not applied. Missing or invalid .env values.")
+        print("⚠️ Proxy not applied. Using direct connection.")
 
     driver = Chrome(
         options=options,
         seleniumwire_options=seleniumwire_options,
         version_main=137
     )
-
+    driver.set_page_load_timeout(120)
     return driver
 
 

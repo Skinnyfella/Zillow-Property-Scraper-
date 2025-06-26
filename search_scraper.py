@@ -1,23 +1,16 @@
 import csv
 import time
-from urllib.parse import urlencode
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from core.browser_manager import launch_browser, save_cookies, load_cookies
+from core.browser_manager import launch_browser
+from core.utils import scroll_page, save_cookies, load_cookies
 
 # --- CONFIG ---
 BASE_URL = "https://www.zillow.com/homes/for_sale/Long-Island-City,-NY_rb/"
 COOKIES_FILE = "zillow_cookies.pkl"
 PAGES_TO_SCRAPE = 5
-
-
-def scroll_page(driver):
-    for _ in range(3):
-        driver.find_element(By.TAG_NAME, "body").send_keys(Keys.PAGE_DOWN)
-        time.sleep(1.5)
 
 
 def generate_page_url(base_url, page_num):
@@ -61,27 +54,16 @@ def extract_listings(driver):
 def scrape_zillow():
     driver = launch_browser(headless=False)
 
-    # 🔍 Check which IP is being used
-    driver.get("https://httpbin.org/ip")
-    try:
-        ip_box = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.TAG_NAME, "pre"))
-        )
-        print(f"🌐 Current IP in use (from .env proxy): {ip_box.text.strip()}")
-    except Exception as e:
-        print(f"⚠️ Failed to fetch IP address: {e}")
-
-    # Load Zillow homepage first
+    # Load Zillow homepage
     driver.get("https://www.zillow.com/")
     load_cookies(driver, COOKIES_FILE)
 
-    # Now visit base URL with cookies loaded
+    # Visit target base URL
     driver.get(BASE_URL)
 
     print("🧠 Solve CAPTCHA if needed...")
     input("✅ Press Enter after solving CAPTCHA manually...")
 
-    # Save updated cookies
     save_cookies(driver, COOKIES_FILE)
 
     all_results = []
@@ -92,20 +74,22 @@ def scrape_zillow():
         driver.get(page_url)
 
         try:
-            WebDriverWait(driver, 50).until(
+            WebDriverWait(driver, 60).until(
                 EC.presence_of_element_located(
-                    (By.CSS_SELECTOR, "article[data-test='property-card']"))
+                    (By.CSS_SELECTOR, "article[data-test='property-card']")
+                )
             )
         except Exception:
-            print("⚠️ Initial load timeout, retrying after 5s...")
+            print("⚠️ Timeout, retrying after 5s...")
             time.sleep(5)
             driver.refresh()
             WebDriverWait(driver, 40).until(
                 EC.presence_of_element_located(
-                    (By.CSS_SELECTOR, "article[data-test='property-card']"))
+                    (By.CSS_SELECTOR, "article[data-test='property-card']")
+                )
             )
 
-        scroll_page(driver)
+        scroll_page(driver, depth=15)
         listings = extract_listings(driver)
         all_results.extend(listings)
 
