@@ -7,7 +7,7 @@ def run_demo():
     logger = get_logger()
     driver = launch_browser(headless=False)
 
-    driver.get("https://www.whatismyip.com/")  # Test IP
+    driver.get("https://httpbin.org/ip")  # Test IP
 
     simulate_mouse_move(driver)
     simulate_scroll(driver)
